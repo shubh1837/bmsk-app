@@ -1,0 +1,130 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // Hashed
+  role      String   // ADMIN, INCHARGE, FIELD_ASSISTANT
+  
+  // For FA: assigned incharge
+  inchargeId String?
+  incharge   User?   @relation("InchargeToFA", fields: [inchargeId], references: [id])
+  fas        User[]  @relation("InchargeToFA")
+
+  tourPlans TourPlan[]
+  trips     Trip[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Station {
+  id              String  @id @default(cuid())
+  stationNumber   String  @unique 
+  stationType     String  // AWS or ARG
+  
+  district        String?
+  block           String?
+  panchayat       String?
+  location        String?
+  
+  latitude        Float
+  longitude       Float
+  
+  visits          Visit[]
+  tourPlanItems   TourPlanItem[]
+  
+  // Additional metadata from CSV can be added here or in a JSON field
+  metadata        String? // JSON string for extra fields
+  vendorEngineerName String?
+  lastVisitedDate    DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TourPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startDate DateTime
+  endDate   DateTime
+  
+  items     TourPlanItem[]
+  trips     Trip[]
+  
+  status    String   @default("APPROVED") // PLANNED, APPROVED, COMPLETED, CANCELLED
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TourPlanItem {
+  id        String   @id @default(cuid())
+  
+  planId    String
+  plan      TourPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  
+  stationId  String
+  station    Station  @relation(fields: [stationId], references: [id])
+  
+  planDate   DateTime @default(now()) // Specific date for this visit within the plan range. Default to avoid migration issues, but should be set.
+  order     Int      @default(0)
+  
+  visited   Boolean  @default(false)
+  purpose   String?
+}
+
+model Trip {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // We can link a trip to a plan optionally
+  planId      String?
+  plan        TourPlan? @relation(fields: [planId], references: [id])
+  
+  startDate   DateTime
+  startLat    Float
+  startLong   Float
+  
+  endDate     DateTime?
+  endLat      Float?
+  endLong     Float?
+  
+  totalDist   Float?   // in km
+  
+  visits      Visit[]
+  
+  status      String   @default("ONGOING") // ONGOING, COMPLETED
+}
+
+model Visit {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stationId   String
+  station     Station  @relation(fields: [stationId], references: [id])
+  
+  visitDate   DateTime @default(now())
+  
+  // Store form data as big JSON object
+  formData    String   // JSON string
+  
+  // Location & Distance
+  latitude    Float?
+  longitude   Float?
+  distanceFromPrev Float? // in km
+  
+  images      String   // JSON array of URLs
+  
+  createdAt   DateTime @default(now())
+}
