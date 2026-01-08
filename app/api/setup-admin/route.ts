@@ -35,8 +35,11 @@ export async function GET() {
                 password: 'admin'
             }
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Setup error:', error);
-        return NextResponse.json({ error: 'Failed to setup admin user' }, { status: 500 });
+        return NextResponse.json({
+            error: 'Failed to setup admin user',
+            details: error?.message || String(error)
+        }, { status: 500 });
     }
 }
