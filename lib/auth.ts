@@ -40,8 +40,7 @@ export const authOptions: NextAuthOptions = {
                 let isValid = user.password === credentials.password
                 if (!isValid) {
                     // Try bcrypt compare if not plain match
-                    // (Assuming existing passwords might be hashed)
-                    // isValid = await bcrypt.compare(credentials.password, user.password)
+                    isValid = await bcrypt.compare(credentials.password, user.password)
                 }
 
                 if (!isValid) {
